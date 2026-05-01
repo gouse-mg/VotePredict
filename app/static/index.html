@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VotePredict — Family Relations Graph</title>
+  <meta name="description" content="Interactive family relations graph powered by FastAPI and D3.js" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Ambient particles -->
+  <div class="particles" id="particles"></div>
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="4"  r="2.5" stroke="currentColor" stroke-width="2"/>
+            <circle cx="4"  cy="20" r="2.5" stroke="currentColor" stroke-width="2"/>
+            <circle cx="20" cy="20" r="2.5" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 6.5L4 17.5M12 6.5L20 17.5" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <div>
+          <p class="brand-name">VotePredict</p>
+          <p class="brand-sub">Family Relations Graph</p>
+        </div>
+      </div>
+
+      <div class="header-chips" id="header-chips">
+        <div class="chip" id="chip-persons"><span class="chip-num">—</span><span class="chip-lbl">Persons</span></div>
+        <div class="chip" id="chip-edges">  <span class="chip-num">—</span><span class="chip-lbl">Relations</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Layout ── -->
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Generate -->
+      <div class="card">
+        <h2 class="card-title">Graph Controls</h2>
+        <button class="btn-generate" id="btn-generate" onclick="App.generate()">
+          <svg viewBox="0 0 24 24" fill="none" class="btn-icon">
+            <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+          </svg>
+          <span id="btn-label">Generate Graph</span>
+          <div class="btn-glow"></div>
+        </button>
+        <div class="status-row" id="status-row">
+          <span class="dot idle" id="status-dot"></span>
+          <span id="status-msg">Ready</span>
+        </div>
+      </div>
+
+      <!-- Relation type legend -->
+      <div class="card">
+        <h3 class="card-sub">Relation Types</h3>
+        <div class="legend">
+          <div class="legend-row"><span class="legend-line" data-type="parent-child"></span>Parent → Child</div>
+          <div class="legend-row"><span class="legend-line" data-type="spouse"></span>Spouse</div>
+          <div class="legend-row"><span class="legend-line" data-type="sibling"></span>Sibling</div>
+          <div class="legend-row"><span class="legend-line" data-type="step-sibling"></span>Step-Sibling</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card">
+        <h3 class="card-sub">Visible Relations</h3>
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" id="f-parent"  checked onchange="App.applyFilters()"><span class="track"><span class="thumb"></span></span>Parent-Child</label>
+          <label class="toggle"><input type="checkbox" id="f-spouse"  checked onchange="App.applyFilters()"><span class="track"><span class="thumb"></span></span>Spouse</label>
+          <label class="toggle"><input type="checkbox" id="f-sibling" checked onchange="App.applyFilters()"><span class="track"><span class="thumb"></span></span>Sibling</label>
+          <label class="toggle"><input type="checkbox" id="f-step"          onchange="App.applyFilters()"><span class="track"><span class="thumb"></span></span>Step-Sibling</label>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="card">
+        <h3 class="card-sub">Search Person</h3>
+        <div class="search-wrap">
+          <svg class="search-ico" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="search" type="text" placeholder="Name or ID…" oninput="App.search(this.value)" />
+        </div>
+      </div>
+
+      <!-- Stats breakdown -->
+      <div class="card" id="stat-card" style="display:none;">
+        <h3 class="card-sub">Breakdown</h3>
+        <div class="stat-grid" id="stat-grid"></div>
+      </div>
+
+      <!-- Physics sliders -->
+      <div class="card">
+        <h3 class="card-sub">Physics</h3>
+        <div class="sliders">
+          <div class="slider-row">
+            <span>Link Distance</span><span id="lbl-dist">80</span>
+          </div>
+          <input type="range" id="sl-dist"   min="30" max="250" value="80"   oninput="App.physics()">
+          <div class="slider-row">
+            <span>Repulsion</span><span id="lbl-chg">-200</span>
+          </div>
+          <input type="range" id="sl-charge" min="-800" max="-30" value="-200" oninput="App.physics()">
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Graph canvas -->
+    <main class="canvas" id="canvas">
+
+      <!-- Empty state -->
+      <div class="empty" id="empty">
+        <div class="empty-icon">
+          <svg viewBox="0 0 110 110" fill="none">
+            <circle cx="55" cy="24" r="13" stroke="currentColor" stroke-width="2.5" opacity=".4"/>
+            <circle cx="18" cy="90" r="13" stroke="currentColor" stroke-width="2.5" opacity=".4"/>
+            <circle cx="92" cy="90" r="13" stroke="currentColor" stroke-width="2.5" opacity=".4"/>
+            <line x1="55" y1="37" x2="18" y2="77" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4" opacity=".3"/>
+            <line x1="55" y1="37" x2="92" y2="77" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4" opacity=".3"/>
+            <circle cx="55" cy="24" r="5" fill="currentColor" opacity=".7"/>
+            <circle cx="18" cy="90" r="5" fill="currentColor" opacity=".4"/>
+            <circle cx="92" cy="90" r="5" fill="currentColor" opacity=".4"/>
+          </svg>
+        </div>
+        <h2>No Graph Generated Yet</h2>
+        <p>Click <strong>Generate Graph</strong> to fetch data from the FastAPI backend and render the family relations network.</p>
+        <button class="btn-generate btn-center" onclick="App.generate()">
+          <svg viewBox="0 0 24 24" fill="none" class="btn-icon"><polygon points="5,3 19,12 5,21" fill="currentColor"/></svg>
+          <span>Generate Graph</span>
+          <div class="btn-glow"></div>
+        </button>
+      </div>
+
+      <!-- Loading overlay -->
+      <div class="loading" id="loading" style="display:none;">
+        <div class="spinner"></div>
+        <p id="loading-msg">Fetching graph from API…</p>
+      </div>
+
+      <!-- SVG -->
+      <svg id="graph-svg" style="display:none;"></svg>
+
+      <!-- Toolbar (top-right of canvas) -->
+      <div class="toolbar" id="toolbar" style="display:none;">
+        <button class="tb-btn" onclick="App.zoomIn()"    title="Zoom In">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M9 6v6M6 9h6M15.5 15.5l2.5 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="tb-btn" onclick="App.zoomOut()"   title="Zoom Out">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h6M15.5 15.5l2.5 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="tb-btn" onclick="App.resetView()" title="Reset View">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M3 10a7 7 0 1 0 7-7c-2 0-3.8.8-5.1 2.1L3 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 3v4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="tb-sep"></div>
+        <span class="tb-hint">Drag · Scroll to zoom · Click node</span>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Node detail panel -->
+  <div class="detail" id="detail" style="display:none;">
+    <button class="detail-close" onclick="App.closeDetail()">✕</button>
+    <div class="d-avatar" id="d-avatar"></div>
+    <h2 class="d-name"  id="d-name"></h2>
+    <span class="d-badge" id="d-badge"></span>
+    <div class="d-rows"  id="d-rows"></div>
+  </div>
+
+  <!-- Hover tooltip -->
+  <div class="tooltip" id="tooltip"></div>
+
+  <script src="/static/graph.js"></script>
+</body>
+</html>
