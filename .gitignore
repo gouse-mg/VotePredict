@@ -1,0 +1,32 @@
+# ── Python ──────────────────────────────────────────────────
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Env / secrets ────────────────────────────────────────────
+.env
+.env.*
+*.env
+
+# ── Dev / scratch files ──────────────────────────────────────
+test.py
+data.csv
+relations_sample.csv
+generate_data.py
+build_relations.py
+execute.txt
+
+# ── OS / editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
