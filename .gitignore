@@ -1,21 +1,28 @@
-# ── Python ──────────────────────────────────────────────────
-venv/
+# ── Python bytecode ──────────────────────────────────────────
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 .Python
+
+# ── Virtual environment ──────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Package build artifacts ──────────────────────────────────
 *.egg-info/
 dist/
 build/
 .eggs/
 
-# ── Env / secrets ────────────────────────────────────────────
+# ── Environment / secrets ────────────────────────────────────
 .env
 .env.*
 *.env
 
-# ── Dev / scratch files ──────────────────────────────────────
+# ── Dev-only files (not needed for deployment) ───────────────
 test.py
 data.csv
 relations_sample.csv
