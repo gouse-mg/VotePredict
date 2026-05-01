@@ -47,6 +47,27 @@
     <!-- Sidebar -->
     <aside class="sidebar">
 
+      <!-- Person Subgraph lookup -->
+      <div class="card" id="card-focus">
+        <h2 class="card-title">Focus on Person</h2>
+        <p class="card-hint">Enter an ID to view only that person's direct relations.</p>
+        <div class="focus-input-row">
+          <input id="focus-id-input" type="number" min="1" max="300" placeholder="e.g. 5"
+            onkeydown="if(event.key==='Enter') App.focusPerson()" />
+          <button class="btn-focus" id="btn-focus" onclick="App.focusPerson()">
+            <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Show
+          </button>
+        </div>
+        <div class="status-row" id="focus-status-row" style="display:none;">
+          <span class="dot" id="focus-dot"></span>
+          <span id="focus-msg"></span>
+        </div>
+        <button class="btn-back" id="btn-back" onclick="App.showFullGraph()" style="display:none;">
+          ← Back to Full Graph
+        </button>
+      </div>
+
       <!-- Generate -->
       <div class="card">
         <h2 class="card-title">Graph Controls</h2>
@@ -63,6 +84,7 @@
         </div>
       </div>
 
+      <!-- Focus mode relation legend (children added) -->
       <!-- Relation type legend -->
       <div class="card">
         <h3 class="card-sub">Relation Types</h3>
@@ -71,6 +93,9 @@
           <div class="legend-row"><span class="legend-line" data-type="spouse"></span>Spouse</div>
           <div class="legend-row"><span class="legend-line" data-type="sibling"></span>Sibling</div>
           <div class="legend-row"><span class="legend-line" data-type="step-sibling"></span>Step-Sibling</div>
+          <div class="legend-row" id="legend-focus" style="display:none;">
+            <span class="legend-dot focus-dot-legend"></span>Focus Person
+          </div>
         </div>
       </div>
 
@@ -141,6 +166,16 @@
           <span>Generate Graph</span>
           <div class="btn-glow"></div>
         </button>
+      </div>
+
+      <!-- Focus banner -->
+      <div class="focus-banner" id="focus-banner" style="display:none;">
+        <div class="focus-banner-inner">
+          <span class="focus-pill">🔍 Focus Mode</span>
+          <span id="focus-banner-name"></span>
+          <span class="focus-banner-sub" id="focus-banner-sub"></span>
+        </div>
+        <button class="btn-back-banner" onclick="App.showFullGraph()">← Full Graph</button>
       </div>
 
       <!-- Loading overlay -->
