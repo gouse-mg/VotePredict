@@ -16,21 +16,6 @@ ROOT_DIR   = BASE_DIR.parent         # project root
 CSV_PATH   = ROOT_DIR / "relations.csv"
 STATIC_DIR = BASE_DIR / "static"
 
-app = FastAPI(title="VotePredict Graph API", version="1.0.0")
-
-# ── Mount static files (CSS / JS) ────────────────────────────
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-# ── Cache CSV rows at startup (read once, reuse on all requests) ──
-_CSV_CACHE: list[dict] | None = None
-
-@app.on_event("startup")
-def preload_csv() -> None:
-    global _CSV_CACHE
-    _CSV_CACHE = load_csv()
-    print(f"[startup] Loaded {len(_CSV_CACHE)} rows from relations.csv")
-
-
 # ══════════════════════════════════════════════════════════════
 # Helpers — defined BEFORE app startup hook uses them
 # ══════════════════════════════════════════════════════════════
