@@ -16,6 +16,21 @@ ROOT_DIR   = BASE_DIR.parent         # project root
 CSV_PATH   = ROOT_DIR / "relations.csv"
 STATIC_DIR = BASE_DIR / "static"
 
+app = FastAPI(title="VotePredict Graph API", version="1.0.0")
+
+# ── Mount static files (CSS / JS) ────────────────────────────
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# ── Cache CSV rows at startup (read once, reuse on all requests) ──
+_CSV_CACHE: list[dict] | None = None
+
+@app.on_event("startup")
+def preload_csv() -> None:
+    global _CSV_CACHE
+    _CSV_CACHE = load_csv()
+    print(f"[startup] Loaded {len(_CSV_CACHE)} rows from relations.csv")
+
+
 # ══════════════════════════════════════════════════════════════
 # Helpers — defined BEFORE app startup hook uses them
 # ══════════════════════════════════════════════════════════════
@@ -27,7 +42,7 @@ def parse_ids(raw: str) -> list[str]:
 
 
 def load_csv() -> list[dict]:
-    """Read relations.csv from disk."""
+    """Read relations.csv from disk (called once at startup)."""
     if not CSV_PATH.exists():
         raise FileNotFoundError(f"relations.csv not found at {CSV_PATH}")
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
@@ -36,7 +51,7 @@ def load_csv() -> list[dict]:
 
 
 def get_rows() -> list[dict]:
-    """Return cached CSV rows. Falls back to disk read if cache is missing."""
+    """Return cached CSV rows. Falls back to disk if cache is empty."""
     if _CSV_CACHE is not None:
         return _CSV_CACHE
     return load_csv()
@@ -243,7 +258,8 @@ async def dashboard():
 async def get_graph():
     """Return the full family graph as JSON."""
     try:
-        graph = build_graph(get_rows())
+        rows  = get_rows()
+        graph = build_graph(rows)
         return JSONResponse(content=graph)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -255,7 +271,8 @@ async def get_graph():
 async def get_person_subgraph(person_id: str):
     """Return a focused subgraph for a specific person ID."""
     try:
-        subgraph = build_person_subgraph(get_rows(), person_id.strip())
+        rows = get_rows()
+        subgraph = build_person_subgraph(rows, person_id.strip())
         return JSONResponse(content=subgraph)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -269,10 +286,8 @@ async def get_person_subgraph(person_id: str):
 async def get_person(person_id: str):
     """Return full details for a single person by ID."""
     try:
-        rows  = get_rows()
-        match = next(
-            (r for r in rows if r.get("id", "").strip() == person_id), None
-        )
+        rows = get_rows()
+        match = next((r for r in rows if r.get("id", "").strip() == person_id), None)
         if not match:
             raise HTTPException(status_code=404, detail=f"Person {person_id} not found")
         return JSONResponse(content={
