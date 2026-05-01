@@ -5,7 +5,6 @@ Frontend only handles rendering via D3.js.
 """
 
 import csv
-import os
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -22,6 +21,15 @@ app = FastAPI(title="VotePredict Graph API", version="1.0.0")
 # ── Mount static files (CSS / JS) ────────────────────────────
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+# ── Cache CSV rows at startup (read once, reuse on all requests) ──
+_CSV_CACHE: list[dict] | None = None
+
+@app.on_event("startup")
+def preload_csv() -> None:
+    global _CSV_CACHE
+    _CSV_CACHE = load_csv()
+    print(f"[startup] Loaded {len(_CSV_CACHE)} rows from relations.csv")
+
 
 # ══════════════════════════════════════════════════════════════
 # Helper — CSV parser
@@ -34,12 +42,19 @@ def parse_ids(raw: str) -> list[str]:
 
 
 def load_csv() -> list[dict]:
-    """Read relations.csv and return a list of row dicts."""
+    """Read relations.csv from disk (called once at startup)."""
     if not CSV_PATH.exists():
         raise FileNotFoundError(f"relations.csv not found at {CSV_PATH}")
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         return [row for row in reader if row.get("id", "").strip()]
+
+
+def get_rows() -> list[dict]:
+    """Return cached CSV rows. Falls back to disk if cache is empty."""
+    if _CSV_CACHE is not None:
+        return _CSV_CACHE
+    return load_csv()
 
 
 # ══════════════════════════════════════════════════════════════
@@ -250,7 +265,7 @@ async def get_graph():
     JS frontend calls this endpoint when the user clicks 'Generate Graph'.
     """
     try:
-        rows  = load_csv()
+        rows  = get_rows()
         graph = build_graph(rows)
         return JSONResponse(content=graph)
     except FileNotFoundError as e:
@@ -267,7 +282,7 @@ async def get_person_subgraph(person_id: str):
     father, mother, spouses, siblings, step-siblings, children.
     """
     try:
-        rows = load_csv()
+        rows = get_rows()
         subgraph = build_person_subgraph(rows, person_id.strip())
         return JSONResponse(content=subgraph)
     except ValueError as e:
@@ -282,7 +297,7 @@ async def get_person_subgraph(person_id: str):
 async def get_person(person_id: str):
     """Return full details for a single person by ID."""
     try:
-        rows = load_csv()
+        rows = get_rows()
         match = next((r for r in rows if r.get("id", "").strip() == person_id), None)
         if not match:
             raise HTTPException(status_code=404, detail=f"Person {person_id} not found")
