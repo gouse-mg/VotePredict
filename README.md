@@ -1,0 +1,3 @@
+# VotePredict
+Graph Neural Network to predict who a indvidual is more likely to vote to
+Starting....
